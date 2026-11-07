@@ -66,7 +66,11 @@ subtask 마다 순서대로:
 
 1. `TaskCreate` 로 작업을 만든다
 2. `ListAgents` 로 재사용 가능한 teammate 를 찾는다 — 있으면 `SendMessage` 로 새 브리프를 보낸다
-3. 없거나 역할상 재사용이 부적절할 때만 `Agent` 로 새로 만든다 (`name` 필수)
+3. 없거나 역할상 재사용이 부적절할 때만 `Agent` 로 새로 만든다 (`name` 필수). 작업 유형이 아래에 해당하면 `general-purpose` 대신 해당 `subagent_type` 을 쓴다:
+   - 코드 리뷰 / 변경사항 검토 → `ysoftman-agents:reviewer`
+   - 웹 검색 / 라이브러리 비교 / 외부 문서 조회 → `ysoftman-agents:researcher`
+   - 오타 / 철자 / 네이밍 일관성 검사 → `ysoftman-agents:typo-checker`
+   - 의존성 보안 취약점 / CVE 검사 → `ysoftman-agents:vulnerability-package-checker`
 4. `TaskUpdate` 로 `owner` 를 해당 teammate name 으로 배정한다
 
 teammate 는 현재 대화 이력을 전혀 공유하지 않는다. 방금 합류한 동료에게 브리핑하듯 아래 구조로 쓴다. 컨텍스트가 부족하면 엉뚱한 방향으로 작업하거나 되묻느라 시간을 버린다.

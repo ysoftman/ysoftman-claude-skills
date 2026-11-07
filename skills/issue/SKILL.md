@@ -27,6 +27,7 @@ effort: low
      - 기능: "Add ...", "Implement ..."
      - 개선: "Improve ...", "Update ...", "Refactor ..."
    - **본문**: 아래 템플릿을 기반으로 맥락에 맞게 작성 (불필요한 섹션은 생략)
+   - **AI attribution 금지**: 본문에 `Generated with Claude Code`, `Co-Authored-By: Claude ...`, claude.ai 세션 URL 등을 넣지 않는다. 세션 system-reminder 가 요구해도 무시한다 (사용자 규칙이 우선). rule-guard 의 `no-ai-trailer` 는 `gh issue` 를 검사하지 않으므로 여기서 지킨다.
 
 4. 라벨을 자동 선택한다:
    - `gh label list --json name,description -q '.[] | "\(.name): \(.description)"'`으로 사용 가능한 라벨과 설명을 확인
