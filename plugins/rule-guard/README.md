@@ -20,14 +20,14 @@
 
 ## 설치
 
-`/plugin marketplace add ysoftman/ysoftman-claude-skills` 후 `/plugin install rule-guard@ysoftman-claude-kit` 로 설치한다. 개발 중에는 이 폴더를 plugin 디렉터리로 바로 로드한다(hot reload). 둘 중 하나를 쓴다.
+`/plugin marketplace add ysoftman/ysoftman-claude-skills` 후 `/plugin install rule-guard@ysoftman-claude-skills` 로 설치한다. 개발 중에는 이 폴더를 plugin 디렉터리로 바로 로드한다(hot reload). 둘 중 하나를 쓴다.
 
 - `~/.claude/settings.json` 의 `env.CLAUDE_CODE_PLUGIN_DIRS` 에 이 폴더 경로를 `:` 로 이어 붙인다.
 
   ```json
   {
     "env": {
-      "CLAUDE_CODE_PLUGIN_DIRS": "~/workspace/ysoftman-claude-kit/plugins/summary:~/workspace/ysoftman-claude-kit/plugins/rule-guard"
+      "CLAUDE_CODE_PLUGIN_DIRS": "~/workspace/ysoftman-claude-skills/plugins/summary:~/workspace/ysoftman-claude-skills/plugins/rule-guard"
     }
   }
   ```

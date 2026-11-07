@@ -1,6 +1,6 @@
 # Mod 재사용 코드
 
-`summary`(`~/workspace/ysoftman-claude-kit/plugins/summary`)와 `rule-guard`(`~/workspace/ysoftman-claude-kit/plugins/rule-guard`) mod 에서 쓰는 코드를 정리했다. 전체 맥락은 두 mod 의 `register.tsx` 와 `tests/` 를 본다.
+`summary`(`~/workspace/ysoftman-claude-skills/plugins/summary`)와 `rule-guard`(`~/workspace/ysoftman-claude-skills/plugins/rule-guard`) mod 에서 쓰는 코드를 정리했다. 전체 맥락은 두 mod 의 `register.tsx` 와 `tests/` 를 본다.
 
 ## 목차
 

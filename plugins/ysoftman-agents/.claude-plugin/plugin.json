@@ -1,5 +1,5 @@
 {
-  "name": "ysoftman-claude-kit",
+  "name": "ysoftman-agents",
   "version": "0.1.0",
   "description": "Agents: reviewer, researcher, typo-checker, vulnerability-package-checker"
 }

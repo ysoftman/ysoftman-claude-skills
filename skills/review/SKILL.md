@@ -53,7 +53,7 @@ Input: $ARGUMENTS
 1. `gh pr view <number>`로 PR 상세 정보(제목, 본문, baseRefName)를 확인한다
 2. `gh pr diff <number>`로 변경 내용을 가져온다
 3. 변경 규모가 매우 크면(파일 수가 많거나 핵심 모듈 포함) 핵심 파일 우선이라는 가이드를 함께 전달한다. lock 파일이나 generated 코드는 빠르게 훑도록 지시한다.
-4. **`Agent` 도구로 `reviewer` 서브에이전트(`subagent_type: ysoftman-claude-kit:reviewer`)를 1개 디스패치**한다(백그라운드가 기본). 변경이 커도 분할하지 않는다. 같은 PR 의 재리뷰·후속 커밋 검증은 새 스폰 대신 idle `reviewer` 에 `SendMessage`(위 역할 분담 원칙). 호출 직후 메인은 사용자 입력 대기/처리로 돌아간다(리뷰 완료를 동기적으로 기다리지 않는다). prompt에 다음을 포함:
+4. **`Agent` 도구로 `reviewer` 서브에이전트(`subagent_type: ysoftman-agents:reviewer`)를 1개 디스패치**한다(백그라운드가 기본). 변경이 커도 분할하지 않는다. 같은 PR 의 재리뷰·후속 커밋 검증은 새 스폰 대신 idle `reviewer` 에 `SendMessage`(위 역할 분담 원칙). 호출 직후 메인은 사용자 입력 대기/처리로 돌아간다(리뷰 완료를 동기적으로 기다리지 않는다). prompt에 다음을 포함:
    - PR 번호와 제목
    - 변경된 diff 전체
    - PR 본문/설명 (의도 컨텍스트)

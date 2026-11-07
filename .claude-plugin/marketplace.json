@@ -1,12 +1,12 @@
 {
-  "name": "ysoftman-claude-kit",
+  "name": "ysoftman-claude-skills",
   "owner": {
     "name": "ysoftman"
   },
   "plugins": [
     {
-      "name": "ysoftman-claude-kit",
-      "source": "./plugins/ysoftman-claude-kit",
+      "name": "ysoftman-agents",
+      "source": "./plugins/ysoftman-agents",
       "description": "Agents: reviewer, researcher, typo-checker, vulnerability-package-checker"
     },
     {

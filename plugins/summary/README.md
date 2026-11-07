@@ -32,12 +32,12 @@ approve 됐고 draft 가 아니며 CI 가 통과했거나 없으면 `⇢ ready: 
 
 ## 설치
 
-`/plugin marketplace add ysoftman/ysoftman-claude-skills` 후 `/plugin install summary@ysoftman-claude-kit` 로 설치한다. 개발 중에는 이 폴더를 plugin 디렉터리로 바로 로드한다(hot reload). 둘 중 하나를 쓴다.
+`/plugin marketplace add ysoftman/ysoftman-claude-skills` 후 `/plugin install summary@ysoftman-claude-skills` 로 설치한다. 개발 중에는 이 폴더를 plugin 디렉터리로 바로 로드한다(hot reload). 둘 중 하나를 쓴다.
 
 - `~/.claude/settings.json` 의 `env.CLAUDE_CODE_PLUGIN_DIRS` 에 이 폴더 경로를 넣는다 (여러 개면 `:` 로 구분).
 - `claude --plugin-dir <이 폴더>` 로 실행한다.
 
-myenv 의 `installclaudecode.sh` 는 이 mod 를 `ysoftman-claude-kit` marketplace 에서 설치하고, 아래 단축키도 그 키나 action 이 비어 있을 때만 `keybindings.json` 에 넣어 준다(예전 `app:toggleDiffPreSession` 바인딩은 옮겨 준다).
+myenv 의 `installclaudecode.sh` 는 이 mod 를 `ysoftman-claude-skills` marketplace 에서 설치하고, 아래 단축키도 그 키나 action 이 비어 있을 때만 `keybindings.json` 에 넣어 준다(예전 `app:toggleDiffPreSession` 바인딩은 옮겨 준다).
 
 Claude Code 2.1.296 에서 확인했다 (PR 줄은 2.1.299).
 

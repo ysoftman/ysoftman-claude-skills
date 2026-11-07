@@ -1,6 +1,6 @@
 ---
 name: mod-authoring
-description: Claude Code mod(함수 hook 플러그인 — pane/패널, 프롬프트 위 band, 단축키 칩, 슬래시 명령)를 만들거나 고칠 때 내장 `plugin-authoring` 스킬과 함께 쓰는 실전 가이드. 패널 탭 표시·전환, keybindings.json `command:` 단축키와 그 안내(프롬프트 아래 힌트 줄 tail), 여러 mod 가 band·힌트 줄을 함께 쓰는 법, 테스트 kit 요령, 수정이 반영되지 않을 때 로드 경로 확인을 다룬다. 사용자가 mod, 모드 만들어, 패널, pane, band, 프롬프트 위 한 줄, 힌트 줄, PromptHint, 단축키 칩, 탭 전환, "reload-plugins 했는데 안 바뀜", `ysoftman-claude-kit/plugins`, `dev-mods`, `register.tsx`, `ui.render`, `$.ui.open` 등을 언급하면 plugin-authoring 과 함께 반드시 사용한다.
+description: Claude Code mod(함수 hook 플러그인 — pane/패널, 프롬프트 위 band, 단축키 칩, 슬래시 명령)를 만들거나 고칠 때 내장 `plugin-authoring` 스킬과 함께 쓰는 실전 가이드. 패널 탭 표시·전환, keybindings.json `command:` 단축키와 그 안내(프롬프트 아래 힌트 줄 tail), 여러 mod 가 band·힌트 줄을 함께 쓰는 법, 테스트 kit 요령, 수정이 반영되지 않을 때 로드 경로 확인을 다룬다. 사용자가 mod, 모드 만들어, 패널, pane, band, 프롬프트 위 한 줄, 힌트 줄, PromptHint, 단축키 칩, 탭 전환, "reload-plugins 했는데 안 바뀜", `ysoftman-claude-skills/plugins`, `dev-mods`, `register.tsx`, `ui.render`, `$.ui.open` 등을 언급하면 plugin-authoring 과 함께 반드시 사용한다.
 ---
 
 # Mod Authoring
@@ -76,7 +76,7 @@ mod 단축키는 **슬래시 명령을 `keybindings.json` 의 `command:` action 
 - **help 로 찾아가는 길**: 명령 설명 끝에 `· help: 사용법` 을 붙이고 `argumentHint: "[help]"` 를 준다. pane 하단 안내에도 `<명령> help` 를 늘 둔다(폭이 좁으면 라벨 없이 keycap 만).
 - **키 이름 고정 금지**: `plugin.json` 의 `description` 같은 고정 문구에 키를 쓰지 않는다. 명령 이름(`/<명령>`)을 쓴다.
 - **mod 폴더의 README.md**: 다음을 적는다.
-  - 설치: `ysoftman-claude-kit` marketplace 의 `/plugin install <mod>@ysoftman-claude-kit`, 개발 중에는 `CLAUDE_CODE_PLUGIN_DIRS` 에 폴더 경로 추가(여러 개면 `:` 구분) 또는 `claude --plugin-dir <폴더>`
+  - 설치: `ysoftman-claude-skills` marketplace 의 `/plugin install <mod>@ysoftman-claude-skills`, 개발 중에는 `CLAUDE_CODE_PLUGIN_DIRS` 에 폴더 경로 추가(여러 개면 `:` 구분) 또는 `claude --plugin-dir <폴더>`
   - 사용: `<명령>`, `<명령> help`
   - 단축키: 바인딩 JSON(`"Chat"` 블록의 `"<키>": "command:<명령>"` 과 `"Global"` 블록의 `pane:previous`/`pane:next` 4개 키), "이미 파일이 있으면 덮어쓰지 말고 `Chat`·`Global` 블록의 `bindings` 에 위 줄만 추가(블록이 없으면 추가, 이미 다른 키에 묶은 action 이나 다른 action 에 쓰는 키는 건너뜀)", 다른 키에 묶어도 안내가 그 키를 따른다는 점, 빠진 바인딩이 있으면 pane 하단에 설정 안내가 나오고 Claude 에게 이 README 대로 설정해 달라고 하면 된다는 점. Claude 는 pane 안내의 요청을 받으면 이 JSON 만 보고 넣으므로 여기서 빠진 키는 설정되지 않는다.
   - 확인한 Claude Code 버전
