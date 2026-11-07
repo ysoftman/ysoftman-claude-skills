@@ -13,7 +13,7 @@ description: Claude Code mod(함수 hook 플러그인 — pane/패널, 프롬프
 
 1. `plugin-authoring` 을 로드하고, 쓰려는 이벤트·props 를 타입 파일에서 확인한다.
 2. **이 세션이 어느 사본을 로드하는지 먼저 확인한다** (아래 "로드 경로"). 엉뚱한 사본을 고치면 테스트는 통과하는데 화면은 그대로다.
-3. 구현한다. TS/TSX 는 biome 기본 포맷(tab, 큰따옴표, 세미콜론)으로 쓰고 `biome check --write <파일>` 로 맞춘다.
+3. 구현한다. TS/TSX 는 `plugin-authoring` 예제 스타일(작은따옴표, 세미콜론 없음, 2-space)을 따르지 않고 처음부터 biome 기본 포맷(tab, 큰따옴표, 세미콜론, 폭 80)으로 쓰고, 플래그 없이 `biome check --write <파일>` 로 맞춘다.
 4. 요구 동작마다 테스트를 쓰고, **수정 전 코드에서 그 테스트가 실패하는지** 확인한다: `git stash push <register.tsx>` → `claude plugin test .` → `git stash pop`. 새 코드에서만 통과해야 회귀를 잡는 테스트다.
 5. 검증: `claude plugin validate .`, `claude plugin test .`, `bunx -p typescript tsc -p .`. validate·test 는 타입 체크를 하지 않으니 tsc 를 빼먹지 않는다.
 6. 로드되는 사본에 반영 → `/reload-plugins` → 사용자에게 화면 확인을 부탁한다. 테스트 kit 은 엔진 동작을 흉내낼 뿐이라 실제 배치·탭·단축키는 화면에서만 확인된다. 확인 전에는 "테스트는 통과, 화면 미확인"으로 보고한다.
