@@ -1,0 +1,23 @@
+{
+  "name": "ysoftman-claude-kit",
+  "owner": {
+    "name": "ysoftman"
+  },
+  "plugins": [
+    {
+      "name": "ysoftman-claude-kit",
+      "source": "./plugins/ysoftman-claude-kit",
+      "description": "Agents: reviewer, researcher, typo-checker, vulnerability-package-checker"
+    },
+    {
+      "name": "rule-guard",
+      "source": "./plugins/rule-guard",
+      "description": "Mod that blocks tool calls breaking the global CLAUDE.md rules"
+    },
+    {
+      "name": "summary",
+      "source": "./plugins/summary",
+      "description": "Mod that shows a summary pane of skill runs, subagents and recent work"
+    }
+  ]
+}
