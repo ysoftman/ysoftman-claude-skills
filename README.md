@@ -5,7 +5,7 @@ ysoftman 의 Claude Code 개인 skills, agents, mods.
 ## 구성
 
 - `skills/` — skills CLI 로 설치하는 skills
-- `plugins/` — claude plugin 으로 설치하는 agent,mods
+- `plugins/` — claude plugin 으로 설치하는 agents,mods
 
 ## 설치
 
