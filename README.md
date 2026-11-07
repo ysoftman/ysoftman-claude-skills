@@ -4,14 +4,13 @@ ysoftman 의 Claude Code 개인 skills, agents, mods.
 
 ## 구성
 
-- `skills/` — skills CLI 로 설치하는 skill (이름 접두어 없음)
-- `plugins/ysoftman-claude-kit` — agents (`ysoftman-claude-kit:reviewer`, `ysoftman-claude-kit:researcher`, `ysoftman-claude-kit:typo-checker`, `ysoftman-claude-kit:vulnerability-package-checker`)
-- `plugins/rule-guard`, `plugins/summary` — mod
+- `skills/` — skills CLI 로 설치하는 skills
+- `plugins/` — claude plugin 으로 설치하는 agent,mods
 
 ## 설치
 
 ```bash
-# skills
+# skills (사용시 /접두어: 를 사용하지 않고 바로 /스킬이름  으로 사용할 수 있다.)
 bunx skills add ysoftman/ysoftman-claude-skills --skill '*' -g -a claude-code -y
 
 # agents, mods
