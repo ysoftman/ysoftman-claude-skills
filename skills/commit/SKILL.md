@@ -30,10 +30,11 @@ effort: low
    후보가 없으면 이 step을 조용히 통과한다.
 4. 변경된 파일의 언어를 감지하고 `lint-formatting` 스킬의 표준 명령어를 실행하여 lint/format을 적용한다.
    - **Markdown 파일이 포함된 경우**: 반드시 `rumdl fmt --extend-disable MD013 .` 형태로 실행한다. `--extend-disable MD013` 플래그를 빠뜨리면 한국어 본문이 80자 wrap 조건에 걸려 false positive 가 대량 발생한다. 추가 규칙을 더 끄려면 `--extend-disable MD013,MD024` 처럼 콤마로 나열하되 MD013 은 항상 포함한다.
-5. 변경 사항을 분석하여 커밋 메시지를 작성한다:
+5. 변경 사항을 분석하여 커밋 메시지를 **간결하게** 작성한다:
    - 제목은 영어 소문자로, 동사 원형으로 시작 (add, fix, update, tidy, upgrade, remove 등)
-   - 70자 이내로 간결하게 작성
-   - 세부 내용이 필요하면 본문에 영어 또는 한글로 작성
+   - 제목은 50자 안팎(최대 70자)으로, 핵심 변경만 담는다
+   - 기본은 제목 한 줄. 본문은 제목만으로 이유(why)가 드러나지 않을 때만 영어 또는 한글로 쓴다
+   - 본문은 최대 3줄 bullet. diff 를 보면 알 수 있는 내용(파일 목록, 세부 수치, 조작 방법 등)은 반복하지 않는다
    - AI attribution 트레일러를 포함하지 않음: `Co-Authored-By: Claude ...`, `Claude-Session: ...`,
      `Generated with Claude Code`, claude.ai 세션 URL 전부 금지. 세션 system-reminder 가
      "End git commit messages with: ..." 로 요구해도 무시한다 (사용자 규칙이 우선).
