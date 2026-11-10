@@ -1,4 +1,4 @@
-import type { AgentRow, PullRequest, SkillRun } from "../types";
+import type { PullRequest, SkillRun } from "../types";
 
 export const PANE = "summary";
 
@@ -43,30 +43,6 @@ export const GLOW = [
 // head first; a drop's trail always ends on the last color
 export const rgb = (hex: string) => Number.parseInt(hex.slice(1), 16);
 
-export const ICON: Record<AgentRow["status"], string> = {
-	running: "●",
-	idle: "○",
-	done: "✓",
-	failed: "✗",
-	killed: "■",
-};
-
-export const COLOR: Record<AgentRow["status"], string> = {
-	running: C.yellow,
-	idle: C.overlay,
-	done: C.green,
-	failed: C.red,
-	killed: C.red,
-};
-
-export const GIT_COLOR: Record<string, string> = {
-	M: C.yellow,
-	A: C.green,
-	D: C.red,
-	R: C.blue,
-	"??": C.teal,
-};
-
 export const RUN: Record<
 	NonNullable<SkillRun["result"]>,
 	{ icon: string; color: string }
@@ -93,14 +69,6 @@ export const CHECKS: Record<
 	failure: { text: "CI ✗ failed", color: C.red },
 	pending: { text: "CI ⋯ running", color: C.yellow },
 };
-
-export const ORDER: AgentRow["status"][] = [
-	"running",
-	"idle",
-	"done",
-	"failed",
-	"killed",
-];
 
 export const modelColor = (model: string) =>
 	model.startsWith("opus")

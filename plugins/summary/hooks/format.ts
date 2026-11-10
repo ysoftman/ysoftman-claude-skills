@@ -51,16 +51,38 @@ export const ago = (ms: number) => {
 export const kilo = (n: number) =>
 	n < 1000 ? `${n}` : `${Math.round(n / 1000)}k`;
 
-export const tail = (s: string, n: number) =>
-	s.length > n ? `…${s.slice(s.length - n + 1)}` : s;
+// characters a terminal draws two cells wide: Hangul, CJK, emoji
+const WIDE =
+	/[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\uff00-\uff60\u{1f300}-\u{1faff}]/gu;
 
-export const pathOf = (e: object) => {
-	const { file_path, notebook_path } = e as {
-		file_path?: unknown;
-		notebook_path?: unknown;
-	};
-	const path = file_path ?? notebook_path;
-	return typeof path === "string" ? path : undefined;
+// the cells a line takes on a terminal
+export const cells = (s: string) => s.replace(WIDE, "  ").length;
+
+// s in lines of at most w cells: broken at spaces, a word wider than a line
+// cut by cells; one line at least
+export const wrap = (s: string, w: number) => {
+	const width = Math.max(1, w);
+	const lines: string[] = [];
+	let line = "";
+	for (const word of s.split(" ").filter((x) => x !== "")) {
+		const joined = line === "" ? word : `${line} ${word}`;
+		if (cells(joined) <= width) {
+			line = joined;
+			continue;
+		}
+		if (line !== "") {
+			lines.push(line);
+		}
+		line = "";
+		for (const ch of word) {
+			if (line !== "" && cells(line + ch) > width) {
+				lines.push(line);
+				line = "";
+			}
+			line += ch;
+		}
+	}
+	return [...lines, line];
 };
 
 export const short = (model: string) => model.replace(/^.*claude-/, "");

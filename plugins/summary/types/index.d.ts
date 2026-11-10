@@ -21,12 +21,6 @@ export type WorkItem = {
 	answer?: string;
 };
 
-export type FileTouch = {
-	path: string;
-	edits: number;
-	status?: string;
-};
-
 export type Alert = {
 	at: number;
 	tool: string;
@@ -86,13 +80,26 @@ export type TurnMark = {
 	ok: boolean;
 };
 
+// a Bash command Claude ran; result is absent while it runs
+export type CommandRun = {
+	id: string;
+	command: string;
+	// the subagent that ran it, by its row's label; absent for the main agent
+	agent?: string;
+	startedAt: number;
+	endedAt?: number;
+	// bg: it left a shell running in the background
+	result?: "ok" | "failed" | "denied" | "bg";
+	// that shell's task id, while the tasks list still runs it
+	shell?: string;
+};
+
 declare module "claude-code" {
 	interface PluginState {
 		summary: {
 			agents: AgentRow[];
 			now: number;
 			recent: WorkItem[];
-			files: FileTouch[];
 			dirty: number;
 			alerts: Alert[];
 			runs: SkillRun[];
@@ -100,7 +107,6 @@ declare module "claude-code" {
 			shown: boolean;
 			chord: string;
 			tabs: string;
-			seen: string[];
 			working: number;
 			tasks: BackgroundTask[];
 			crons: SessionCron[];
@@ -108,6 +114,8 @@ declare module "claude-code" {
 			repo: RepoState;
 			pr: PullRequest | null;
 			autoOpened: boolean;
+			commands: CommandRun[];
+			historyAt: number;
 		};
 	}
 }

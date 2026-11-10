@@ -5,12 +5,22 @@ Claude Code 세션에서 지금 무슨 일이 일어나고 있는지 한 패널�
 | 박스 | 내용 |
 | --- | --- |
 | 헤더 | 진행 중인 일: ⏳ 메인 턴, 🔧 스킬, 🤖 서브에이전트, 📝 recent 요약 생성 |
-| recent | 끝난 턴마다 한 줄 요약 (haiku), 경과·소요 시간, 토큰 |
-| agents & jobs | 서브에이전트, background shell, session cron |
-| files | 세션이 고친 파일과 git 상태 (`1×` Edit 횟수, `·` shell·서브에이전트가 바꾼 파일) |
+| scheduled | session cron 과 다음 실행 시각. cron 이 있을 때만 보인다 |
+| recent | 끝난 턴마다 한 줄 요약 (haiku), 경과·소요 시간, 토큰. 요약이 열보다 길면 mod 가 칸 단위로 줄을 나눈다 |
+| commands | Claude 와 서브에이전트가 실행한 Bash 명령 최근 10개 중 5줄과 소요 시간 (spinner 실행 중, `✓` 성공, `✗` 실패, `■` plugin 이 막은 명령, 서브에이전트 명령은 흐린 `@<이름>`). 여러 줄 명령은 줄을 ` ↵ ` 로 이어 한 행에 보인다. 백그라운드로 띄운 명령은 시간 대신 `bg` 로, shell 이 도는 동안 `●`, 끝나면 흐린 `○`. 목록 위 휠이나 `▲`/`▼` 로 스크롤한다 |
 | git | 브랜치, upstream, ahead/behind, 최근 커밋, 현재 브랜치의 열린 PR (아래 "PR 줄") |
 | skills | 실행한 스킬과 모델 |
 | turn time | 메인 턴마다 걸린 시간 sparkline |
+
+서브에이전트는 Claude Code 하단 영역에서 보고(패널 헤더에는 실행 중인 개수만 `🤖 N agents` 로 나온다), background shell 은 commands 에 `● bg` 로 보인다.
+
+## 배치
+
+박스는 자주 보는 순서로 놓는다: 곧 실행될 일(scheduled) → 결과(recent, commands) → 저장소 상태(git) → 통계(skills, turn time).
+
+패널 폭과 상관없이 박스는 늘 한 열로 위에서 아래로 놓이고, 모두 패널 폭을 쓴다.
+
+commands 목록 위에서 휠을 굴리면 목록만 움직이고 패널은 그대로다. 목록 밖이거나 명령이 5개 이하면(스크롤할 게 없어 `▲`/`▼` 도 없다) 패널이 스크롤된다. 엔진은 박스별 휠 이벤트를 주지 않으므로, 패널을 그릴 때 목록이 놓인 행(헤더·rule·alerts 와 그 위에 있는 scheduled·recent 의 행 수로 계산)을 기억해 두고 휠이 그 행들 위일 때만 목록을 움직인다. 그 계산이 맞도록 recent 요약은 터미널이 아니라 mod 가 칸 단위로 줄을 나눈다(공백에서 끊고, 한 단어가 줄보다 길면 칸 단위로, 한글은 2칸). 줄마다 잘라서 그리므로 한 줄이 한 행이다. 휠이 닿지 않는 화면에서는 `▲`/`▼` 를 누른다(클릭, 또는 `ctrl+x tab` 후 Tab·Enter). 목록이 맨 위면 새 명령을 따라가고, 내려 보는 중이면 보던 줄이 그 자리에 남는다(가장 오래된 명령이 10개 밖으로 밀려나면 한 줄씩 밀린다). 권한 프롬프트에서 사람이 거부한 명령은 엔진이 오류와 같은 결과로 넘겨 `✗` 로 보인다.
 
 ## PR 줄
 
@@ -39,7 +49,7 @@ approve 됐고 draft 가 아니며 CI 가 통과했거나 없으면 `⇢ ready: 
 
 myenv 의 `installclaudecode.sh` 는 이 mod 를 `ysoftman-claude-skills` marketplace 에서 설치하고, 아래 단축키도 그 키나 action 이 비어 있을 때만 `keybindings.json` 에 넣어 준다(예전 `app:toggleDiffPreSession` 바인딩은 옮겨 준다).
 
-Claude Code 2.1.296 에서 확인했다 (PR 줄은 2.1.299).
+Claude Code 2.1.296 에서 확인했다 (PR 줄은 2.1.299, commands·scheduled 는 2.1.322).
 
 ## 사용
 

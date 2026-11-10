@@ -2,8 +2,7 @@ import type { Elements, RenderInput } from "claude-code";
 import type {
 	AgentRow,
 	Alert,
-	BackgroundTask,
-	FileTouch,
+	CommandRun,
 	PullRequest,
 	RepoState,
 	SessionCron,
@@ -12,20 +11,17 @@ import type {
 	WorkItem,
 } from "../types";
 import { hhmm, nextFire } from "./cron";
-import { ago, elapsed, kilo, tail } from "./format";
+import { ago, elapsed, kilo, wrap } from "./format";
+import { historyBox } from "./history";
 import { isMergeable } from "./pr";
 import type { Rain } from "./rain";
 import { RAIN, RAIN_ROWS, rainCells, rainMessage } from "./rain";
-import { end, isBusy, isLive, isOpenRun } from "./status";
+import { isBusy, isOpenRun } from "./status";
 import {
 	C,
 	CHECKS,
-	COLOR,
-	GIT_COLOR,
 	GLOW,
-	ICON,
 	modelColor,
-	ORDER,
 	PANE,
 	REVIEW,
 	RUN,
@@ -47,16 +43,19 @@ export type PaneValues = {
 	list: AgentRow[];
 	runs: SkillRun[];
 	work: WorkItem[];
-	touched: FileTouch[];
 	uncommitted: number;
 	git: RepoState;
 	pr: PullRequest | null;
 	warnings: Alert[];
 	tag: string;
 	since: number;
-	bg: BackgroundTask[];
 	scheduled: SessionCron[];
 	marks: TurnMark[];
+	commands: CommandRun[];
+	historyAt: number;
+	onHistoryScroll: (by: number) => unknown;
+	// the commands list's first row in the tree as drawn, for the wheel
+	onHistoryTop: (row: number) => unknown;
 };
 
 export const paneView = ({
@@ -71,16 +70,18 @@ export const paneView = ({
 	list,
 	runs,
 	work,
-	touched,
 	uncommitted,
 	git,
 	pr,
 	warnings,
 	tag,
 	since,
-	bg,
 	scheduled,
 	marks,
+	commands,
+	historyAt,
+	onHistoryScroll,
+	onHistoryTop,
 }: PaneValues) => {
 	const { Box, Button, Link, Text } = els;
 	const frame = Math.floor(t / 100);
@@ -88,40 +89,25 @@ export const paneView = ({
 	const busy = isBusy(list, runs, work);
 	const glow = busy ? (GLOW[frame % GLOW.length] ?? C.mauve) : C.mauve;
 	const width = Math.max(30, e.props.bodyColumns);
+	// cells inside a box's frame and padding
+	const inner = width - 4;
 	const rule = width - 2;
 	const at = busy ? (frame % (rule + 6)) - 3 : -3;
 	const lit = [at, at + 3].map((n) => Math.min(rule, Math.max(0, n))) as [
 		number,
 		number,
 	];
-	const spark = marks.slice(-(width - 4));
+	const spark = marks.slice(-inner);
 	const longest = Math.max(1, ...spark.map((m) => m.ms));
-	// live agents first, then background work, crons and the latest finished,
-	// drawn in that order
-	const finished = list.filter((a) => !isLive(a)).reverse();
-	const keep = new Set<AgentRow | BackgroundTask | SessionCron>(
-		[...list.filter(isLive), ...bg, ...scheduled, ...finished].slice(0, SHOWN),
-	);
-	const liveShown = list.filter((a) => isLive(a) && keep.has(a));
-	const doneShown = finished.filter((a) => keep.has(a));
-	const shown = [...liveShown, ...doneShown];
-	const bgShown = bg.filter((b) => keep.has(b));
-	const cronsShown = scheduled.filter((c) => keep.has(c));
-	const more = list.length + bg.length + scheduled.length - keep.size;
-	const labelWidth = Math.max(
-		0,
-		...shown.map((a) => a.label.length),
-		...bgShown.map((b) => b.type.length),
-	);
-	const modelWidth = Math.max(0, ...shown.map((a) => a.model.length));
-	const pathWidth = width - 4 - 3 - 4;
-	const shortPath = (p: string) =>
-		root !== undefined && p.startsWith(`${root}/`)
-			? p.slice(root.length + 1)
-			: p;
-	const counts = ORDER.map(
-		(s) => [s, list.filter((a) => a.status === s).length] as const,
-	);
+	// the crons the last stop reported, the first SHOWN of them drawn
+	const cronsShown = scheduled.slice(0, SHOWN);
+	const more = scheduled.length - cronsShown.length;
+	const turnStats =
+		marks.length === 0
+			? ""
+			: `  ${marks.length} turn${marks.length === 1 ? "" : "s"} · avg ${elapsed(
+					marks.reduce((n, m) => n + m.ms, 0) / marks.length,
+				)} · max ${elapsed(Math.max(...marks.map((m) => m.ms)))}`;
 	if ("Raster" in els) {
 		rain.columns = width;
 	}
@@ -156,28 +142,16 @@ export const paneView = ({
 			? [{ color: C.green, text: "📝 summarizing" }]
 			: []),
 	];
-	const agentRow = (a: AgentRow) => (
-		<Text wrap="truncate-end">
-			<Text color={COLOR[a.status]}>
-				{a.status === "running" ? spin : ICON[a.status]}
-			</Text>{" "}
-			<Text color={C.text} dimColor={a.status !== "running"}>
-				{a.label.padEnd(labelWidth)}
-			</Text>{" "}
-			<Text color={modelColor(a.model)} dimColor={a.status !== "running"}>
-				{a.model.padEnd(modelWidth)}
-			</Text>{" "}
-			<Text color={C.overlay} dimColor={a.status !== "running"}>
-				{elapsed(end(a, t) - a.startedAt).padStart(6)}
-			</Text>{" "}
-			<Text color={C.subtext} dimColor>
-				{a.description}
-				{a.status === "running" && a.tool !== undefined ? ` · ${a.tool}` : ""}
-			</Text>
-		</Text>
-	);
 	// a PR read for the branch before a checkout is not this one's
 	const pull = pr !== null && pr.branch === git.branch ? pr : undefined;
+	const gitLine =
+		root === undefined
+			? "  not a repository"
+			: `  ${git.branch ?? "?"}${
+					git.upstream === undefined
+						? ` (no upstream) · ${uncommitted} uncommitted`
+						: ` → ${git.upstream} · ${uncommitted} uncommitted · ↑${git.ahead} ↓${git.behind}`
+				}`;
 	const prMarks =
 		pull === undefined
 			? []
@@ -191,6 +165,24 @@ export const paneView = ({
 				];
 	const keycap = (k: string) => (
 		<Text backgroundColor={C.surface0} color={C.lavender}>{` ${k} `}</Text>
+	);
+	// recent's summaries in lines that fit beside the mark, a row each, so the
+	// rows above the commands list are known
+	const workLines = work.map((w) => wrap(w.text ?? "summarizing…", inner - 2));
+	// The commands list's first row in the tree, for the wheel: the header and
+	// the rule a row each, the alerts box (two borders, a title, a row each),
+	// scheduled (two borders, a title, a row a cron, one for +N more) and recent
+	// (two borders, a title, a row a summary line, one for each item's time),
+	// then the list's own top border and title.
+	onHistoryTop(
+		2 +
+			(warnings.length > 0 ? warnings.length + 3 : 0) +
+			(scheduled.length > 0 ? 3 + cronsShown.length + (more > 0 ? 1 : 0) : 0) +
+			3 +
+			(work.length === 0
+				? 1
+				: workLines.reduce((n, lines) => n + lines.length + 1, 0)) +
+			2,
 	);
 
 	return (
@@ -244,6 +236,37 @@ export const paneView = ({
 					))}
 				</Box>
 			)}
+			{/* crons, only while there are some: what runs next leads */}
+			{scheduled.length > 0 && (
+				<Box
+					flexDirection="column"
+					borderStyle="round"
+					borderColor={C.surface1}
+					paddingX={1}
+				>
+					<Text>
+						<Text bold color={C.lavender}>
+							scheduled
+						</Text>
+						<Text color={C.overlay}>{`  ${scheduled.length}`}</Text>
+					</Text>
+					{cronsShown.map((c) => {
+						const at = nextFire(c.schedule, t);
+						return (
+							<Text wrap="truncate-end">
+								<Text color={C.lavender}>{c.recurring ? "↻" : "◷"}</Text>{" "}
+								<Text color={C.text}>
+									{at === undefined
+										? c.schedule
+										: `${hhmm(at, t)} in ${ago(at - t)}`}
+								</Text>{" "}
+								<Text color={C.subtext}>{c.prompt}</Text>
+							</Text>
+						);
+					})}
+					{more > 0 && <Text color={C.overlay}>{`+${more} more`}</Text>}
+				</Box>
+			)}
 			<Box
 				flexDirection="column"
 				borderStyle="round"
@@ -256,122 +279,54 @@ export const paneView = ({
 				{work.length === 0 && (
 					<Text color={C.overlay}>no finished work yet</Text>
 				)}
-				{work.map((w, i) => (
-					<Box flexDirection="column">
-						<Box gap={1}>
-							{w.text === undefined ? (
-								<Text color={C.peach}>{spin}</Text>
-							) : (
-								<Text color={C.green}>✓</Text>
-							)}
-							<Text
-								bold={i === 0}
-								dimColor={i > 0}
-								color={w.text === undefined ? C.subtext : C.text}
-							>
-								{w.text ?? "summarizing…"}
-							</Text>
-						</Box>
-						<Box paddingLeft={2}>
-							<Text color={C.overlay} dimColor>
-								{[
-									`${ago(t - w.at)} ago`,
-									elapsed(w.durationMs),
-									...(w.tokens === undefined ? [] : [kilo(w.tokens)]),
-								].join(" · ")}
-							</Text>
-						</Box>
-					</Box>
-				))}
-			</Box>
-			<Box
-				flexDirection="column"
-				borderStyle="round"
-				borderColor={C.surface1}
-				paddingX={1}
-			>
-				<Text>
-					<Text bold color={C.mauve}>
-						{"agents & jobs"}
-					</Text>
-					{counts
-						.filter(([, n]) => n > 0)
-						.map(([s, n]) => (
-							<Text color={COLOR[s]}>{`  ${ICON[s]} ${n} ${s}`}</Text>
-						))}
-					{bg.length > 0 && <Text color={C.sky}>{`  ${bg.length} bg`}</Text>}
-					{scheduled.length > 0 && (
-						<Text color={C.lavender}>{`  ${scheduled.length} scheduled`}</Text>
-					)}
-				</Text>
-				{list.length + bg.length + scheduled.length === 0 && (
-					<Text color={C.overlay}>nothing running or scheduled</Text>
-				)}
-				{liveShown.map(agentRow)}
-				{bgShown.map((b) => (
-					<Text wrap="truncate-end">
-						<Text color={b.status === "running" ? C.yellow : C.overlay}>
-							{b.status === "running" ? "●" : "○"}
-						</Text>{" "}
-						<Text color={C.sky}>{b.type.padEnd(labelWidth)}</Text>{" "}
-						<Text color={C.subtext}>{b.label}</Text>
-					</Text>
-				))}
-				{cronsShown.map((c) => {
-					const at = nextFire(c.schedule, t);
-					return (
-						<Text wrap="truncate-end">
-							<Text color={C.lavender}>{c.recurring ? "↻" : "◷"}</Text>{" "}
-							<Text color={C.text}>
-								{at === undefined
-									? c.schedule
-									: `${hhmm(at, t)} in ${ago(at - t)}`}
-							</Text>{" "}
-							<Text color={C.subtext}>{c.prompt}</Text>
+				{work.map((w, i) => {
+					const line = (text: string) => (
+						<Text
+							wrap="truncate-end"
+							bold={i === 0}
+							dimColor={i > 0}
+							color={w.text === undefined ? C.subtext : C.text}
+						>
+							{text}
 						</Text>
 					);
+					return (
+						<Box flexDirection="column">
+							{(workLines[i] ?? []).map((text, j) =>
+								j === 0 ? (
+									<Box gap={1}>
+										{w.text === undefined ? (
+											<Text color={C.peach}>{spin}</Text>
+										) : (
+											<Text color={C.green}>✓</Text>
+										)}
+										{line(text)}
+									</Box>
+								) : (
+									<Box paddingLeft={2}>{line(text)}</Box>
+								),
+							)}
+							<Box paddingLeft={2}>
+								<Text wrap="truncate-end" color={C.overlay} dimColor>
+									{[
+										`${ago(t - w.at)} ago`,
+										elapsed(w.durationMs),
+										...(w.tokens === undefined ? [] : [kilo(w.tokens)]),
+									].join(" · ")}
+								</Text>
+							</Box>
+						</Box>
+					);
 				})}
-				{doneShown.map(agentRow)}
-				{more > 0 && <Text color={C.overlay}>{`+${more} more`}</Text>}
 			</Box>
-			<Box
-				flexDirection="column"
-				borderStyle="round"
-				borderColor={C.surface1}
-				paddingX={1}
-			>
-				<Text>
-					<Text bold color={C.yellow}>
-						files
-					</Text>
-					<Text color={C.overlay}>
-						{`  ${touched.length} edited · ${uncommitted} uncommitted`}
-					</Text>
-				</Text>
-				{touched.length === 0 && (
-					<Text color={C.overlay}>no file edited yet</Text>
-				)}
-				{touched.slice(0, SHOWN).map((f) => (
-					<Text>
-						<Text
-							color={
-								f.status === undefined
-									? C.overlay
-									: (GIT_COLOR[f.status] ?? C.peach)
-							}
-						>
-							{(f.status ?? "·").padEnd(2)}
-						</Text>{" "}
-						<Text color={C.overlay}>
-							{(f.edits > 0 ? `${f.edits}×` : "·").padStart(3)}
-						</Text>{" "}
-						<Text color={C.text}>{tail(shortPath(f.path), pathWidth)}</Text>
-					</Text>
-				))}
-				{touched.length > SHOWN && (
-					<Text color={C.overlay}>{`+${touched.length - SHOWN} more`}</Text>
-				)}
-			</Box>
+			{historyBox({
+				els,
+				t,
+				width,
+				commands,
+				offset: historyAt,
+				onScroll: onHistoryScroll,
+			})}
 			<Box
 				flexDirection="column"
 				borderStyle="round"
@@ -382,15 +337,7 @@ export const paneView = ({
 					<Text bold color={C.peach}>
 						git
 					</Text>
-					<Text color={C.overlay}>
-						{root === undefined
-							? "  not a repository"
-							: `  ${git.branch ?? "?"}${
-									git.upstream === undefined
-										? ` (no upstream) · ${uncommitted} uncommitted`
-										: ` → ${git.upstream} · ${uncommitted} uncommitted · ↑${git.ahead} ↓${git.behind}`
-								}`}
-					</Text>
+					<Text color={C.overlay}>{gitLine}</Text>
 				</Text>
 				{pull !== undefined && (
 					<Text wrap="truncate-end">
@@ -475,13 +422,7 @@ export const paneView = ({
 					<Text bold color={C.sky}>
 						turn time
 					</Text>
-					{marks.length > 0 && (
-						<Text color={C.overlay}>
-							{`  ${marks.length} turn${marks.length === 1 ? "" : "s"} · avg ${elapsed(
-								marks.reduce((n, m) => n + m.ms, 0) / marks.length,
-							)} · max ${elapsed(Math.max(...marks.map((m) => m.ms)))}`}
-						</Text>
-					)}
+					{marks.length > 0 && <Text color={C.overlay}>{turnStats}</Text>}
 				</Text>
 				{spark.length === 0 ? (
 					<Text color={C.overlay}>no turn yet</Text>
