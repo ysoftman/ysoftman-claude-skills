@@ -17,7 +17,7 @@
     {
       "name": "summary",
       "source": "./plugins/summary",
-      "description": "Mod that shows a summary pane of skill runs, subagents and recent work"
+      "description": "Mod that shows a summary pane of running work, recent turns, Bash commands, git status and skills"
     }
   ]
 }
