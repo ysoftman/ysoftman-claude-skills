@@ -86,3 +86,17 @@ export const wrap = (s: string, w: number) => {
 };
 
 export const short = (model: string) => model.replace(/^.*claude-/, "");
+
+// mcp__<server>__<tool> as [server, tool], plugin_ and claude_ai_ prefixes off
+export const mcpName = (name: string): [string, string] | undefined => {
+	const m = /^mcp__(.+?)__(.+)$/.exec(name);
+	return m?.[1] === undefined || m[2] === undefined
+		? undefined
+		: [
+				m[1]
+					.replace(/^claude_ai_/, "")
+					.replace(/^plugin_(.+)_\1$/, "$1")
+					.replace(/^plugin_/, ""),
+				m[2],
+			];
+};

@@ -6,13 +6,22 @@ import type {
 	BackgroundTask,
 	CommandRun,
 	Commit,
+	McpServer,
 	RepoState,
 	SessionCron,
 	SkillRun,
 	TurnMark,
 	WorkItem,
 } from "../types";
-import { clip, cut, firstLine, newTokens, short, totalTokens } from "./format";
+import {
+	clip,
+	cut,
+	firstLine,
+	mcpName,
+	newTokens,
+	short,
+	totalTokens,
+} from "./format";
 import { clampHistory, HISTORY_MAX, HISTORY_ROWS } from "./history";
 import { paneView } from "./pane";
 import { readPullRequest } from "./pr";
@@ -86,6 +95,9 @@ const pullRequest = atom({ plugin: "summary", key: "pr" } as const, null);
 const commands = atom({ plugin: "summary", key: "commands" } as const, []);
 
 const historyAt = atom({ plugin: "summary", key: "historyAt" } as const, 0);
+
+// MCP servers called this session, the latest first
+const mcp = atom({ plugin: "summary", key: "mcp" } as const, []);
 
 const TURNS_MAX = 200;
 
@@ -333,6 +345,57 @@ const endCommand = async (
 			c.id === id
 				? { ...c, endedAt, result, ...(shell === undefined ? {} : { shell }) }
 				: c,
+		),
+	);
+};
+
+// An MCP call counts under its server, which keeps the latest tool, caller and
+// result; a gateway tool (execute*) names the operation it runs in `name`.
+const startMcp = async (
+	$: EngineInterface,
+	tool: string,
+	agentId: string | undefined,
+	op: unknown,
+) => {
+	const name = mcpName(tool);
+	if (name === undefined) {
+		return undefined;
+	}
+	const [server, called] = name;
+	const agent =
+		agentId === undefined
+			? undefined
+			: ((await read($, agents)).find((a) => a.id === agentId)?.label ??
+				agentId.slice(0, 8));
+	const at = await $.clock.now();
+	await update($, mcp, (list) => {
+		const was = list.find((s) => s.server === server);
+		const row: McpServer = {
+			server,
+			tool:
+				called.startsWith("execute") && typeof op === "string" ? op : called,
+			calls: (was?.calls ?? 0) + 1,
+			running: (was?.running ?? 0) + 1,
+			at,
+			...(agent === undefined ? {} : { agent }),
+		};
+		return [row, ...list.filter((s) => s.server !== server)];
+	});
+	return server;
+};
+
+const endMcp = async (
+	$: EngineInterface,
+	server: string,
+	ran: { deny?: string; isError?: true },
+) => {
+	const result: McpServer["result"] =
+		ran.deny !== undefined ? "denied" : ran.isError === true ? "failed" : "ok";
+	await update($, mcp, (list) =>
+		list.map((s) =>
+			s.server === server
+				? { ...s, running: Math.max(0, s.running - 1), result }
+				: s,
 		),
 	);
 };
@@ -767,6 +830,12 @@ export const register: Register = (on) => {
 		const tool = String(e.tool);
 		const id = e.agentId;
 		worked ||= id === undefined;
+		const server = await startMcp(
+			$,
+			tool,
+			id,
+			"name" in e ? e.name : undefined,
+		);
 		const [, ran] = await Promise.all([
 			id === undefined || tool === "SubagentHandback"
 				? undefined
@@ -778,6 +847,9 @@ export const register: Register = (on) => {
 			next(e),
 		]);
 		await record($, tool, id, ran);
+		if (server !== undefined) {
+			await endMcp($, server, ran);
+		}
 
 		return ran;
 	}).catch((_, e, next) => next(e));
@@ -997,6 +1069,7 @@ export const register: Register = (on) => {
 			onToggle: () => toggle($, root),
 			list: await read($, agents),
 			runs: await read($, skillRuns),
+			servers: await read($, mcp),
 			work: await read($, recent),
 			uncommitted: await read($, dirty),
 			git: await read($, repo),

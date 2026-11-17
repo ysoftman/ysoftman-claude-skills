@@ -3,6 +3,7 @@ import type {
 	AgentRow,
 	Alert,
 	CommandRun,
+	McpServer,
 	PullRequest,
 	RepoState,
 	SessionCron,
@@ -12,7 +13,7 @@ import type {
 } from "../types";
 import { hhmm, nextFire } from "./cron";
 import { ago, elapsed, kilo, wrap } from "./format";
-import { historyBox } from "./history";
+import { historyBox, MARK } from "./history";
 import { isMergeable } from "./pr";
 import type { Rain } from "./rain";
 import { RAIN, RAIN_ROWS, rainCells, rainMessage } from "./rain";
@@ -42,6 +43,7 @@ export type PaneValues = {
 	onToggle: () => unknown;
 	list: AgentRow[];
 	runs: SkillRun[];
+	servers: McpServer[];
 	work: WorkItem[];
 	uncommitted: number;
 	git: RepoState;
@@ -69,6 +71,7 @@ export const paneView = ({
 	onToggle,
 	list,
 	runs,
+	servers,
 	work,
 	uncommitted,
 	git,
@@ -412,6 +415,39 @@ export const paneView = ({
 					))
 				)}
 			</Box>
+			{servers.length > 0 && (
+				<Box
+					flexDirection="column"
+					borderStyle="round"
+					borderColor={C.surface1}
+					paddingX={1}
+				>
+					<Text bold color={C.pink}>
+						mcp
+					</Text>
+					{servers.slice(0, SHOWN).map((s) => (
+						<Text wrap="truncate-end">
+							{s.running > 0 || s.result === undefined ? (
+								<Text color={C.peach}>{spin}</Text>
+							) : (
+								<Text color={MARK[s.result].color}>{MARK[s.result].icon}</Text>
+							)}{" "}
+							<Text color={C.text}>{s.server}</Text>{" "}
+							<Text color={C.overlay}>{`×${s.calls}`}</Text>{" "}
+							<Text color={C.subtext}>{s.tool}</Text>
+							{s.agent !== undefined && (
+								<Text color={C.overlay}>{` @${s.agent}`}</Text>
+							)}{" "}
+							<Text color={C.overlay} dimColor>
+								{ago(t - s.at)}
+							</Text>
+						</Text>
+					))}
+					{servers.length > SHOWN && (
+						<Text color={C.overlay}>{`+${servers.length - SHOWN} more`}</Text>
+					)}
+				</Box>
+			)}
 			<Box
 				flexDirection="column"
 				borderStyle="round"

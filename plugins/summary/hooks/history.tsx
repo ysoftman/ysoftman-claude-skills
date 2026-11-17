@@ -7,7 +7,7 @@ import { C, SPINNER } from "./theme";
 export const HISTORY_MAX = 10;
 export const HISTORY_ROWS = 5;
 
-const MARK: Record<
+export const MARK: Record<
 	NonNullable<CommandRun["result"]>,
 	{ icon: string; color: string }
 > = {

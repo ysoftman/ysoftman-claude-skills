@@ -94,6 +94,17 @@ export type CommandRun = {
 	shell?: string;
 };
 
+// an MCP server Claude or its subagents called, as of its latest call
+export type McpServer = {
+	server: string;
+	tool: string;
+	calls: number;
+	running: number;
+	at: number;
+	agent?: string;
+	result?: "ok" | "failed" | "denied";
+};
+
 declare module "claude-code" {
 	interface PluginState {
 		summary: {
@@ -116,6 +127,7 @@ declare module "claude-code" {
 			autoOpened: boolean;
 			commands: CommandRun[];
 			historyAt: number;
+			mcp: McpServer[];
 		};
 	}
 }

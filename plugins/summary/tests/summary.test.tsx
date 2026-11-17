@@ -694,6 +694,43 @@ test("alerts collect denied and failed tool calls until the next prompt", async 
 	expect(await shows(/^alerts$/)).toBe(false);
 });
 
+test("mcp lists servers newest first with calls, last tool and result", async ($, on) => {
+	const { clock, fail, shows } = await setup($, on);
+	expect(await shows(/^mcp$/)).toBe(false);
+	await $.agent.spawn(
+		spawn("이슈 조회", "general-purpose", { name: "issues" }),
+	);
+	await $.tool.call({ tool: "mcp__docs__read" } as never);
+	fail.mcp__claude_ai_Google_Calendar__list_events = {
+		isError: true,
+		result: null,
+		text: "auth",
+	};
+	await $.tool.call({
+		tool: "mcp__claude_ai_Google_Calendar__list_events",
+	} as never);
+	fail.mcp__plugin_chat_chat__send_message = { deny: "blocked" };
+	await $.tool.call({ tool: "mcp__plugin_chat_chat__send_message" } as never);
+	await clock.advance(5_000);
+	await $.tool.call({
+		tool: "mcp__atlassian__searchJiraIssuesUsingJql",
+	} as never);
+	await $.tool.call({
+		tool: "mcp__atlassian__executeRead",
+		name: "getJiraIssueRemoteLinks",
+		agentId: "a1",
+	} as never);
+
+	expect(await shows(/^mcp$/)).toBe(true);
+	expect(
+		await shows(/^✓ atlassian ×2 getJiraIssueRemoteLinks @issues 0s$/),
+	).toBe(true);
+	expect(await shows(/^■ chat ×1 send_message 5s$/)).toBe(true);
+	expect(await shows(/^✗ Google_Calendar ×1 list_events 5s$/)).toBe(true);
+	expect(await shows(/^\+1 more$/)).toBe(true);
+	expect(await shows(/docs/)).toBe(false);
+});
+
 test("the header glows only while something runs", async ($, on) => {
 	const { clock, header, shows } = await setup($, on);
 	expect(await header()).toBe(C.mauve);
@@ -811,7 +848,7 @@ test("boxes stand by how often they are read", async ($, on) => {
 		const found = (
 			await ui.findAll({
 				type: "Text",
-				text: /^(scheduled|recent|commands|git|skills|turn time)$/,
+				text: /^(scheduled|recent|commands|git|skills|mcp|turn time)$/,
 			})
 		)
 			.filter((t) => t.props.bold === true)
@@ -839,6 +876,18 @@ test("boxes stand by how often they are read", async ($, on) => {
 				...BOXES,
 			]);
 		}
+	}
+	await $.tool.call({ tool: "mcp__docs__read" } as never);
+	for (const surface of ["terminal", "desktop"] as const) {
+		expect(await titles(surface, 60)).toEqual([
+			"scheduled",
+			"recent",
+			"commands",
+			"git",
+			"skills",
+			"mcp",
+			"turn time",
+		]);
 	}
 });
 
