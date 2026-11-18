@@ -70,10 +70,16 @@ type Gh = {
 	calls: string[][];
 };
 
+const RTK_GAIN =
+	'{"summary":{"total_commands":12123,"total_input":3416079,"total_output":2571011,"total_saved":849132,"avg_savings_pct":24.85,"total_time_ms":1741341,"avg_time_ms":176,"oversized_excluded":31}}';
+
+const RTK_PROJECT =
+	'{"summary":{"total_commands":429,"total_input":136468,"total_output":103675,"total_saved":32793,"avg_savings_pct":24.03,"total_time_ms":118498,"avg_time_ms":276,"oversized_excluded":0}}';
+
 const setup = async (
 	$: Engine,
 	on: On,
-	start: { status?: string; gh?: Partial<Gh>; ps?: string } = {},
+	start: { status?: string; gh?: Partial<Gh>; ps?: string; rtk?: string } = {},
 ) => {
 	const clock = mock.clock(on, { now: 1_000_000 });
 	const live: Record<string, AgentStatus> = {};
@@ -112,7 +118,31 @@ const setup = async (
 	});
 	const git = { status: start.status ?? "", log: "" };
 	const gh: Gh = { remote: "", reply: "", exitCode: 0, calls: [], ...start.gh };
+	// rtk is not installed unless a test gives its reply; -p answers `project`
+	const rtk = {
+		reply: start.rtk,
+		project: RTK_PROJECT,
+		calls: [] as string[][],
+		cwds: [] as (string | undefined)[],
+	};
 	on("process.run", (_, e) => {
+		if (e.argv[0] === "rtk") {
+			rtk.calls.push([...e.argv]);
+			rtk.cwds.push(e.init?.cwd);
+			// no shell runs it, so a missing executable rejects the call
+			if (rtk.reply === undefined) {
+				return { deny: "spawn rtk ENOENT" };
+			}
+			return {
+				value: {
+					exitCode: 0,
+					stdout: e.argv.includes("-p") ? rtk.project : rtk.reply,
+					stderr: "",
+					isStdoutTruncated: false,
+					isStderrTruncated: false,
+				},
+			};
+		}
 		const isGh = e.argv[0] === "gh";
 		if (isGh) {
 			gh.calls.push([...e.argv]);
@@ -248,6 +278,7 @@ const setup = async (
 		opened,
 		panes,
 		results,
+		rtk,
 		shows,
 		writes,
 		// the commands list's first shown command
@@ -731,6 +762,41 @@ test("mcp lists servers newest first with calls, last tool and result", async ($
 	expect(await shows(/docs/)).toBe(false);
 });
 
+test("rtk shows what it saved everywhere and in this project", async ($, on) => {
+	const { rtk, shows } = await setup($, on, { rtk: RTK_GAIN });
+	expect(rtk.calls).toEqual([
+		["rtk", "gain", "-f", "json"],
+		["rtk", "gain", "-p", "-f", "json"],
+	]);
+	// the project is the repository, not where the shell stands
+	expect(rtk.cwds).toEqual([undefined, "/repo"]);
+	expect(await shows(/^rtk$/)).toBe(true);
+	expect(await shows(/^all {5}849k saved 24\.9% ×12123$/)).toBe(true);
+	expect(await shows(/^project {2}33k saved 24\.0% {3}×429$/)).toBe(true);
+
+	// a render runs nothing; the end of a main turn reads again
+	rtk.reply = RTK_GAIN.replace("849132", "851900");
+	expect(rtk.calls.length).toBe(2);
+	await $.turn.complete(finish("t1", ""));
+	expect(await shows(/^all {5}852k saved 24\.9% ×12123$/)).toBe(true);
+
+	// rtk gone since: the box goes with it
+	rtk.reply = undefined;
+	await $.turn.complete(finish("t2", ""));
+	expect(await shows(/^rtk$/)).toBe(false);
+});
+
+test("no rtk box without rtk or with output that is not its JSON", async ($, on) => {
+	const { rtk, shows } = await setup($, on);
+	expect(rtk.calls.length).toBe(2);
+	expect(await shows(/^rtk$/)).toBe(false);
+	expect(await shows(/saved/)).toBe(false);
+
+	rtk.reply = "rtk: no data yet";
+	await $.turn.complete(finish("t1", ""));
+	expect(await shows(/^rtk$/)).toBe(false);
+});
+
 test("the header glows only while something runs", async ($, on) => {
 	const { clock, header, shows } = await setup($, on);
 	expect(await header()).toBe(C.mauve);
@@ -834,7 +900,7 @@ const BOXES = ["recent", "commands", "git", "skills", "turn time"];
 
 test("boxes stand by how often they are read", async ($, on) => {
 	on("classic.Stop", () => ({}));
-	await setup($, on);
+	const { rtk } = await setup($, on);
 	const titles = async (
 		surface: "terminal" | "desktop",
 		bodyColumns: number,
@@ -848,7 +914,7 @@ test("boxes stand by how often they are read", async ($, on) => {
 		const found = (
 			await ui.findAll({
 				type: "Text",
-				text: /^(scheduled|recent|commands|git|skills|mcp|turn time)$/,
+				text: /^(scheduled|recent|commands|git|skills|mcp|rtk|turn time)$/,
 			})
 		)
 			.filter((t) => t.props.bold === true)
@@ -886,6 +952,20 @@ test("boxes stand by how often they are read", async ($, on) => {
 			"git",
 			"skills",
 			"mcp",
+			"turn time",
+		]);
+	}
+	rtk.reply = RTK_GAIN;
+	await $.turn.complete(finish("t1", ""));
+	for (const surface of ["terminal", "desktop"] as const) {
+		expect(await titles(surface, 60)).toEqual([
+			"scheduled",
+			"recent",
+			"commands",
+			"git",
+			"skills",
+			"mcp",
+			"rtk",
 			"turn time",
 		]);
 	}

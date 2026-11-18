@@ -105,6 +105,16 @@ export type McpServer = {
 	result?: "ok" | "failed" | "denied";
 };
 
+// what rtk saved: tokens, their share of the input, and the commands it ran on
+export type RtkGain = {
+	saved: number;
+	pct: number;
+	commands: number;
+};
+
+// rtk's savings over every project and in this one; null without rtk
+export type RtkState = { all: RtkGain; project: RtkGain } | null;
+
 declare module "claude-code" {
 	interface PluginState {
 		summary: {
@@ -128,6 +138,7 @@ declare module "claude-code" {
 			commands: CommandRun[];
 			historyAt: number;
 			mcp: McpServer[];
+			rtk: RtkState;
 		};
 	}
 }

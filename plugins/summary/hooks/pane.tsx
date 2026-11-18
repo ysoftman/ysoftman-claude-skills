@@ -6,6 +6,8 @@ import type {
 	McpServer,
 	PullRequest,
 	RepoState,
+	RtkGain,
+	RtkState,
 	SessionCron,
 	SkillRun,
 	TurnMark,
@@ -44,6 +46,7 @@ export type PaneValues = {
 	list: AgentRow[];
 	runs: SkillRun[];
 	servers: McpServer[];
+	gain: RtkState;
 	work: WorkItem[];
 	uncommitted: number;
 	git: RepoState;
@@ -72,6 +75,7 @@ export const paneView = ({
 	list,
 	runs,
 	servers,
+	gain,
 	work,
 	uncommitted,
 	git,
@@ -446,6 +450,45 @@ export const paneView = ({
 					{servers.length > SHOWN && (
 						<Text color={C.overlay}>{`+${servers.length - SHOWN} more`}</Text>
 					)}
+				</Box>
+			)}
+			{gain !== null && (
+				<Box
+					flexDirection="column"
+					borderStyle="round"
+					borderColor={C.surface1}
+					paddingX={1}
+				>
+					<Text bold color={C.yellow}>
+						rtk
+					</Text>
+					{(
+						[
+							["all", gain.all],
+							["project", gain.project],
+						] as const
+					).map(([scope, g]) => {
+						// the bigger the share saved, the louder the row
+						const impact =
+							g.pct >= 50 ? C.green : g.pct >= 20 ? C.yellow : C.overlay;
+						// both rows pad to the wider one, so the columns line up
+						const pad = (cell: (g: RtkGain) => string) =>
+							cell(g).padStart(
+								Math.max(cell(gain.all).length, cell(gain.project).length),
+							);
+						return (
+							<Text wrap="truncate-end">
+								<Text color={C.subtext}>{scope.padEnd(7)}</Text>{" "}
+								<Text color={impact}>
+									{`${pad((g) => kilo(g.saved))} saved`}
+								</Text>{" "}
+								<Text bold={g.pct >= 50} color={impact}>
+									{pad((g) => `${g.pct.toFixed(1)}%`)}
+								</Text>{" "}
+								<Text color={C.overlay}>{pad((g) => `×${g.commands}`)}</Text>
+							</Text>
+						);
+					})}
 				</Box>
 			)}
 			<Box

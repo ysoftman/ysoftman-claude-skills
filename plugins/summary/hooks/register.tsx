@@ -8,6 +8,7 @@ import type {
 	Commit,
 	McpServer,
 	RepoState,
+	RtkState,
 	SessionCron,
 	SkillRun,
 	TurnMark,
@@ -19,6 +20,7 @@ import {
 	firstLine,
 	mcpName,
 	newTokens,
+	rtkGain,
 	short,
 	totalTokens,
 } from "./format";
@@ -98,6 +100,9 @@ const historyAt = atom({ plugin: "summary", key: "historyAt" } as const, 0);
 
 // MCP servers called this session, the latest first
 const mcp = atom({ plugin: "summary", key: "mcp" } as const, []);
+
+// rtk's token savings, null while rtk is missing or its output unreadable
+const rtk = atom({ plugin: "summary", key: "rtk" } as const, null);
 
 const TURNS_MAX = 200;
 
@@ -230,6 +235,37 @@ const refreshRepo = async ($: EngineInterface, root: string, head: string) => {
 	if (JSON.stringify(next) !== JSON.stringify(await read($, repo))) {
 		await update($, repo, () => next);
 	}
+};
+
+const readRtk = async ($: EngineInterface, scope: string[], cwd?: string) => {
+	const run = await $.process
+		.run(["rtk", "gain", ...scope, "-f", "json"], {
+			timeoutMs: 5_000,
+			...(cwd === undefined ? {} : { cwd }),
+		})
+		.catch(() => undefined);
+	return run?.exitCode === 0 ? rtkGain(run.stdout) : undefined;
+};
+
+let rtkRun: Promise<unknown> = Promise.resolve();
+
+// rtk missing, failing or hanging leaves no box and holds nothing up; -p
+// counts under the repository, wherever the session's shell has gone since
+const refreshRtk = ($: EngineInterface, root: string | undefined) => {
+	rtkRun = rtkRun
+		.then(async () => {
+			const [all, project] = await Promise.all([
+				readRtk($, []),
+				readRtk($, ["-p"], root),
+			]);
+			const next: RtkState =
+				all === undefined || project === undefined ? null : { all, project };
+			if (JSON.stringify(next) !== JSON.stringify(await read($, rtk))) {
+				await update($, rtk, () => next);
+			}
+		})
+		.catch(() => undefined);
+	return rtkRun;
 };
 
 // One read at a time, so an older read cannot land after a newer one.
@@ -631,6 +667,7 @@ export const register: Register = (on) => {
 		root = top?.exitCode === 0 ? top.stdout.trim() : undefined;
 		await refreshGit($, root);
 		void refreshPr($, root);
+		void refreshRtk($, root);
 		if (e.isInteractive && !(await read($, autoOpened))) {
 			await update($, autoOpened, () => true);
 			if (!(await isSideAgent($))) {
@@ -963,6 +1000,9 @@ export const register: Register = (on) => {
 			worked = false;
 		}
 		void refreshPr($, root);
+		if (id === undefined) {
+			void refreshRtk($, root);
+		}
 
 		return next(e);
 	});
@@ -1070,6 +1110,7 @@ export const register: Register = (on) => {
 			list: await read($, agents),
 			runs: await read($, skillRuns),
 			servers: await read($, mcp),
+			gain: await read($, rtk),
 			work: await read($, recent),
 			uncommitted: await read($, dirty),
 			git: await read($, repo),

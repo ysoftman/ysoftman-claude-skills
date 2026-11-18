@@ -11,13 +11,14 @@ Claude Code 세션에서 지금 무슨 일이 일어나고 있는지 한 패널�
 | git | 브랜치, upstream, ahead/behind, 최근 커밋, 현재 브랜치의 열린 PR (아래 "PR 줄") |
 | skills | 실행한 스킬과 모델 |
 | mcp | 최근 호출한 MCP server 3개와 결과(spinner 실행 중, `✓` 성공, `✗` 실패, `■` plugin 이 막은 호출), 호출 횟수, 마지막 tool, 지난 시간. 서브에이전트가 부른 호출은 `@<이름>`. server 이름의 `plugin_`, `claude_ai_` 접두어는 뺀다. `execute*` gateway tool 은 인자 `name` 에 담긴 실제 operation 을 보인다. 호출이 있을 때만 보인다 |
+| rtk | rtk(Rust Token Killer) 가 줄인 토큰: 전체(`all`)와 현재 프로젝트(`project`)별로 절약 토큰 수, 절약률, 명령 수 (예: `all 849k saved 24.9% ×12123`). 절약률이 50% 이상이면 초록(굵게), 20% 이상이면 노랑, 그 밑은 흐리게 칠한다. `rtk gain -f json` 과 `rtk gain -p -f json` 을 세션 시작과 메인 턴이 끝날 때 읽는다. rtk 가 없거나 실행·파싱에 실패하면 박스를 그리지 않는다 |
 | turn time | 메인 턴마다 걸린 시간 sparkline |
 
 서브에이전트는 Claude Code 하단 영역에서 보고(패널 헤더에는 실행 중인 개수만 `🤖 N agents` 로 나온다), background shell 은 commands 에 `● bg` 로 보인다.
 
 ## 배치
 
-박스는 자주 보는 순서로 놓는다: 곧 실행될 일(scheduled) → 결과(recent, commands) → 저장소 상태(git) → 통계(skills, mcp, turn time).
+박스는 자주 보는 순서로 놓는다: 곧 실행될 일(scheduled) → 결과(recent, commands) → 저장소 상태(git) → 통계(skills, mcp, rtk, turn time).
 
 패널 폭과 상관없이 박스는 늘 한 열로 위에서 아래로 놓이고, 모두 패널 폭을 쓴다.
 

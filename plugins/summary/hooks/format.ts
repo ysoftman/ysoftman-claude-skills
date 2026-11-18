@@ -1,4 +1,5 @@
 import type { ModelUsage } from "claude-code";
+import type { RtkGain } from "../types";
 
 export const totalTokens = (u: ModelUsage) =>
 	u.input_tokens +
@@ -99,4 +100,22 @@ export const mcpName = (name: string): [string, string] | undefined => {
 					.replace(/^plugin_/, ""),
 				m[2],
 			];
+};
+
+// `rtk gain -f json` as its summary's savings; undefined when it is not that
+export const rtkGain = (stdout: string): RtkGain | undefined => {
+	try {
+		const s = (JSON.parse(stdout) as { summary?: Record<string, unknown> })
+			.summary;
+		const saved = s?.total_saved;
+		const pct = s?.avg_savings_pct;
+		const commands = s?.total_commands;
+		return typeof saved === "number" &&
+			typeof pct === "number" &&
+			typeof commands === "number"
+			? { saved, pct, commands }
+			: undefined;
+	} catch {
+		return undefined;
+	}
 };

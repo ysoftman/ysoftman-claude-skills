@@ -1,6 +1,6 @@
 {
   "name": "summary",
-  "version": "0.3.0",
-  "description": "Toggle a summary pane (/summary) of running work, scheduled crons, recent turns, Bash commands, git and PR status, skills, MCP servers and turn times",
+  "version": "0.4.0",
+  "description": "Toggle a summary pane (/summary) of running work, scheduled crons, recent turns, Bash commands, git and PR status, skills, MCP servers, rtk token savings and turn times",
   "types": "./types/index.d.ts"
 }
