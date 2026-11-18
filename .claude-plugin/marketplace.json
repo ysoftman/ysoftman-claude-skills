@@ -12,12 +12,12 @@
     {
       "name": "rule-guard",
       "source": "./plugins/rule-guard",
-      "description": "Mod that blocks tool calls breaking the global CLAUDE.md rules"
+      "description": "Mod that blocks tool calls breaking the global CLAUDE.md rules (by ysoftman)"
     },
     {
       "name": "summary",
       "source": "./plugins/summary",
-      "description": "Mod that shows a summary pane of running work, recent turns, Bash commands, git status, skills, MCP servers and rtk token savings"
+      "description": "Mod that shows a summary pane of running work, recent turns, Bash commands, git status, skills, MCP servers and rtk token savings (by ysoftman)"
     }
   ]
 }
