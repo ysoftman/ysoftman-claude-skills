@@ -473,6 +473,20 @@ test("the pane lists skill runs with the model each ran on", async ($, on) => {
 	expect(await shows(/^sonnet-5-5 · low$/)).toBe(true);
 });
 
+test("a skill a subagent loads shows under its label", async ($, on) => {
+	const { shows } = await setup($, on);
+	const ran = await $.agent.spawn(spawn("페이지 개선", "general-purpose"));
+	await $.tool.call({
+		tool: "Skill",
+		skill: "dataviz",
+		agentId: ran.agentId,
+	} as never);
+	expect(await shows(new RegExp(`^${SPIN} dataviz @general-purpose `))).toBe(
+		true,
+	);
+	expect(await shows(/^🔧 dataviz @general-purpose 0s$/)).toBe(true);
+});
+
 test("the shimmer sweeps a full cycle without breaking the pane", async ($, on) => {
 	const { clock, shows } = await setup($, on);
 	await $.agent.spawn(spawn("PR 리뷰", "reviewer"));

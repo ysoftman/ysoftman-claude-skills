@@ -25,6 +25,7 @@ const setup = ($: Engine, on: On) => {
 		return next(e);
 	});
 	on("command.list", () => ({ value: COMMANDS }));
+	on("agent.list", () => ({ value: [] }));
 	on("prompt.submit", (_, e) => ({ text: e.text }));
 	// biome-ignore lint/correctness/useYield: a streaming hook must be a generator; this one streams nothing
 	on("turn.step", async function* (_, e) {
@@ -69,7 +70,8 @@ const setup = ($: Engine, on: On) => {
 			turnId,
 			reason,
 		});
-	const runs = async () => (state.runs ?? []) as { result?: string }[];
+	const runs = async () =>
+		(state.runs ?? []) as { result?: string; skills: string[] }[];
 	const model = async () => state.model;
 
 	return { answered, type, step, complete, runs, model };
@@ -123,16 +125,11 @@ test("paths and commands that start no turn are not skills", async ($, on) => {
 	expect(await runs()).toEqual([]);
 });
 
-test("records a skill the main loop loads, not a subagent one or a denied one", async ($, on) => {
+test("records a skill the main loop loads, not a denied one", async ($, on) => {
 	const { type, step, runs } = setup($, on);
 
 	await type("lint this");
 	await step("t1", 0, "claude-opus-5-5", "max");
-	await $.tool.call({
-		tool: "Skill",
-		skill: "lint-formatting",
-		agentId: "a1",
-	} as never);
 	await $.tool.call({ tool: "Skill", skill: "nope" });
 	await step("t1", 1, "claude-opus-5-5", "max");
 	expect(await runs()).toEqual([]);
@@ -141,5 +138,56 @@ test("records a skill the main loop loads, not a subagent one or a denied one", 
 	await step("t1", 2, "claude-sonnet-5-5", "low");
 	expect(await runs()).toMatchObject([
 		{ skills: ["commit"], model: "sonnet-5-5", effort: "low" },
+	]);
+});
+
+test("a subagent's skills are a run of its own, closed when its turn ends", async ($, on) => {
+	const { type, step, complete, runs } = setup($, on);
+	const sub = (skill: string, agentId = "a1234567890") =>
+		$.tool.call({ tool: "Skill", skill, agentId } as never);
+
+	await type("/team build it");
+	await step("t1", 0, "claude-opus-5-5", "max");
+	await sub("ui-ux-pro-max");
+	await sub("dataviz");
+	await sub("dataviz");
+	await sub("nope");
+	expect(await runs()).toMatchObject([
+		{ skills: ["team"], model: "opus-5-5" },
+		{
+			skills: ["ui-ux-pro-max", "dataviz"],
+			agent: "a1234567",
+			agentId: "a1234567890",
+		},
+	]);
+	expect((await runs()).map((r) => r.result)).toEqual([undefined, undefined]);
+
+	// the main run still follows the main loop, under the subagent's
+	await $.tool.call({ tool: "Skill", skill: "commit" });
+	await step("t1", 1, "claude-opus-5-5", "max");
+	expect(await runs()).toMatchObject([
+		{ skills: ["team", "commit"] },
+		{ skills: ["ui-ux-pro-max", "dataviz"] },
+	]);
+
+	await $.turn.complete({
+		answer: "",
+		durationMs: 1,
+		isAborted: false,
+		turnId: "s1",
+		reason: "answer",
+		agentId: "a1234567890",
+	} as never);
+	expect((await runs()).map((r) => r.result)).toEqual([undefined, "done"]);
+
+	await complete("t1");
+	expect((await runs()).map((r) => r.result)).toEqual(["done", "done"]);
+
+	// its next turn opens a new run
+	await sub("commit");
+	expect(await runs()).toMatchObject([
+		{ skills: ["team", "commit"] },
+		{ skills: ["ui-ux-pro-max", "dataviz"], result: "done" },
+		{ skills: ["commit"], agent: "a1234567" },
 	]);
 });

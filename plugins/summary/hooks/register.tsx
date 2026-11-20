@@ -514,14 +514,59 @@ const discover = async ($: EngineInterface, id: string, model: string) => {
 	await update($, now, () => row.startedAt);
 };
 
+// the main agent's runs; a subagent's carry its id and close with its turn
+const isMainRun = (r: SkillRun) => r.agentId === undefined;
+
 const patchOpen = async ($: EngineInterface, fn: (r: SkillRun) => SkillRun) => {
-	const last = (await read($, skillRuns)).at(-1);
+	const list = await read($, skillRuns);
+	const at = list.findLastIndex(isMainRun);
+	const last = list[at];
 	if (
 		last !== undefined &&
 		isOpenRun(last) &&
 		JSON.stringify(fn(last)) !== JSON.stringify(last)
 	) {
-		await update($, skillRuns, (l) => [...l.slice(0, -1), fn(last)]);
+		await update($, skillRuns, (l) =>
+			l.map((r, i) => (i === at ? fn(last) : r)),
+		);
+	}
+};
+
+// a skill a subagent loads joins that agent's open run, or opens one
+const openAgentRun = async ($: EngineInterface, id: string, skill: string) => {
+	const open = (r: SkillRun) => r.agentId === id && isOpenRun(r);
+	const was = (await read($, skillRuns)).find(open);
+	if (was !== undefined) {
+		if (!was.skills.includes(skill)) {
+			await update($, skillRuns, (l) =>
+				l.map((r) => (open(r) ? { ...r, skills: [...r.skills, skill] } : r)),
+			);
+		}
+		return;
+	}
+	const row = (await read($, agents)).find((a) => a.id === id);
+	const run: SkillRun = {
+		skills: [skill],
+		model: row?.model ?? "",
+		startedAt: await $.clock.now(),
+		agent: row?.label ?? id.slice(0, 8),
+		agentId: id,
+	};
+	await update($, skillRuns, (l) => [...l, run].slice(-SHOWN));
+};
+
+const closeAgentRuns = async (
+	$: EngineInterface,
+	ids: string[],
+	result: SkillRun["result"],
+) => {
+	const hit = (r: SkillRun) =>
+		r.agentId !== undefined && ids.includes(r.agentId) && isOpenRun(r);
+	if ((await read($, skillRuns)).some(hit)) {
+		const endedAt = await $.clock.now();
+		await update($, skillRuns, (l) =>
+			l.map((r) => (hit(r) ? { ...r, endedAt, result } : r)),
+		);
 	}
 };
 
@@ -531,7 +576,7 @@ const openRun = async (
 	model: string,
 	effort?: string,
 ) => {
-	if (isOpenRun((await read($, skillRuns)).at(-1))) {
+	if (isOpenRun((await read($, skillRuns)).findLast(isMainRun))) {
 		await patchOpen($, (r) => ({ ...r, skills }));
 		return;
 	}
@@ -850,14 +895,15 @@ export const register: Register = (on) => {
 		return step;
 	});
 
-	on("tool.call", { tool: "Skill" }, async (_, e, next) => {
+	on("tool.call", { tool: "Skill" }, async ($, e, next) => {
 		const ran = await next(e);
-		if (
-			e.agentId === undefined &&
-			ran.deny === undefined &&
-			ran.isError !== true
-		) {
+		if (ran.deny !== undefined || ran.isError === true) {
+			return ran;
+		}
+		if (e.agentId === undefined) {
 			loaded = [...new Set([...loaded, e.skill])];
+		} else {
+			await openAgentRun($, e.agentId, e.skill);
 		}
 
 		return ran;
@@ -942,7 +988,9 @@ export const register: Register = (on) => {
 		}
 		const hit = (a: AgentRow) =>
 			a.status !== "killed" && (a.id === task || a.name === task);
-		if ((await read($, agents)).some(hit)) {
+		const stopped = (await read($, agents)).filter(hit).map((a) => a.id);
+		if (stopped.length > 0) {
+			await closeAgentRuns($, stopped, "aborted");
 			await update($, agents, (list) =>
 				list.map((a) =>
 					hit(a) ? { ...a, status: "killed", endedAt: end(a, t) } : a,
@@ -964,6 +1012,7 @@ export const register: Register = (on) => {
 			);
 		}
 		if (id !== undefined) {
+			await closeAgentRuns($, [id], RUN_END[e.reason]);
 			await refreshGit($, root);
 		}
 		if (id === undefined) {

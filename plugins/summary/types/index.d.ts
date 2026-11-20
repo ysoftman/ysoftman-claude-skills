@@ -35,6 +35,10 @@ export type SkillRun = {
 	startedAt: number;
 	endedAt?: number;
 	result?: "done" | "failed" | "aborted";
+	// the subagent that loaded them, by its row's label and its id; absent for
+	// the main agent
+	agent?: string;
+	agentId?: string;
 };
 
 export type BackgroundTask = {

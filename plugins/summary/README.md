@@ -9,7 +9,7 @@ Claude Code 세션에서 지금 무슨 일이 일어나고 있는지 한 패널�
 | recent | 끝난 턴마다 한 줄 요약 (haiku), 경과·소요 시간, 토큰. 요약이 열보다 길면 mod 가 칸 단위로 줄을 나눈다 |
 | commands | Claude 와 서브에이전트가 실행한 Bash 명령 최근 10개 중 5줄과 소요 시간 (spinner 실행 중, `✓` 성공, `✗` 실패, `■` plugin 이 막은 명령, 서브에이전트 명령은 흐린 `@<이름>`). 여러 줄 명령은 줄을 ` ↵ ` 로 이어 한 행에 보인다. 백그라운드로 띄운 명령은 시간 대신 `bg` 로, shell 이 도는 동안 `●`, 끝나면 흐린 `○`. 목록 위 휠이나 `▲`/`▼` 로 스크롤한다 |
 | git | 브랜치, upstream, ahead/behind, 최근 커밋, 현재 브랜치의 열린 PR (아래 "PR 줄") |
-| skills | 실행한 스킬과 모델 |
+| skills | 실행한 스킬과 모델. 서브에이전트가 로드한 스킬은 `@라벨` 을 붙여 따로 표시 |
 | mcp | 최근 호출한 MCP server 3개와 결과(spinner 실행 중, `✓` 성공, `✗` 실패, `■` plugin 이 막은 호출), 호출 횟수, 마지막 tool, 지난 시간. 서브에이전트가 부른 호출은 `@<이름>`. server 이름의 `plugin_`, `claude_ai_` 접두어는 뺀다. `execute*` gateway tool 은 인자 `name` 에 담긴 실제 operation 을 보인다. 호출이 있을 때만 보인다 |
 | rtk | rtk(Rust Token Killer) 가 줄인 토큰: 전체(`all`)와 현재 프로젝트(`project`)별로 절약 토큰 수, 절약률, 명령 수 (예: `all 849k saved 24.9% ×12123`). 절약률이 50% 이상이면 초록(굵게), 20% 이상이면 노랑, 그 밑은 흐리게 칠한다. `rtk gain -f json` 과 `rtk gain -p -f json` 을 세션 시작과 메인 턴이 끝날 때 읽는다. rtk 가 없거나 실행·파싱에 실패하면 박스를 그리지 않는다 |
 | turn time | 메인 턴마다 걸린 시간 sparkline |

@@ -122,18 +122,18 @@ export const paneView = ({
 	// inline, the frame fits the tree and would grow to bodyRows instead
 	const floor =
 		e.props.placement === "dock" ? e.props.scroll.bodyRows : undefined;
-	const skill = runs.at(-1);
+	const skill = runs.findLast(isOpenRun);
 	const agentsRunning = list.filter((a) => a.status === "running").length;
 	// what keeps Claude busy, one mark each, in the colors of their boxes
 	const status = [
 		...(since > 0
 			? [{ color: C.peach, text: `⏳ working ${elapsed(t - since)}` }]
 			: []),
-		...(isOpenRun(skill) && skill !== undefined
+		...(skill !== undefined
 			? [
 					{
 						color: C.blue,
-						text: `🔧 ${skill.skills.join(", ")} ${elapsed(t - skill.startedAt)}`,
+						text: `🔧 ${skill.skills.join(", ")}${skill.agent === undefined ? "" : ` @${skill.agent}`} ${elapsed(t - skill.startedAt)}`,
 					},
 				]
 			: []),
@@ -408,9 +408,12 @@ export const paneView = ({
 								color={r.result === undefined ? C.text : C.subtext}
 							>
 								{r.skills.join(", ")}
-							</Text>{" "}
+							</Text>
+							{r.agent !== undefined && (
+								<Text color={C.overlay}>{` @${r.agent}`}</Text>
+							)}{" "}
 							<Text color={modelColor(r.model)}>
-								{[r.model, r.effort].filter((v) => v !== undefined).join(" · ")}
+								{[r.model, r.effort].filter(Boolean).join(" · ")}
 							</Text>{" "}
 							<Text color={C.overlay}>
 								{elapsed((r.endedAt ?? t) - r.startedAt)}

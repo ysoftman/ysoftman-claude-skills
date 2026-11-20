@@ -57,5 +57,5 @@ export const isOpenRun = (r: SkillRun | undefined) =>
 
 export const isBusy = (list: AgentRow[], runs: SkillRun[], work: WorkItem[]) =>
 	list.some((a) => a.status === "running") ||
-	(runs.length > 0 && runs.at(-1)?.result === undefined) ||
+	runs.some(isOpenRun) ||
 	work.some((w) => w.text === undefined);
